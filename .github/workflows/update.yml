@@ -20,27 +20,62 @@ jobs:
       env:
         WORKFLOW_FILE: .github/workflows/lint.yml
       run: |-
-        # Get the configured version number in the `actions/setup-go` step.
-        configured_version="$(
+        # Get the configured version number.
+        configured="$(
           sed -n 's/^[[:space:]]*go-version:[[:space:]]*//p' "${WORKFLOW_FILE}" \
           | head -n 1 \
           | tr -d '[:space:]' \
           | tr -d "\'"
         )"
         # Get the latest version released.
-        latest_version="$(
+        latest="$(
           curl -fsSL "https://go.dev/VERSION?m=text" \
           | head -n 1 \
           | sed 's/^go//'
         )"
-        printf '%s\n' "${configured_version}"
-        printf '%s\n' "${latest_version}"
-        echo "configured_version=${configured_version}" >> "${GITHUB_OUTPUT}"
-        echo "latest_version=${latest_version}" >> "${GITHUB_OUTPUT}"
+        # Compare the versions.
+        echo "configured=${configured}" >> "${GITHUB_OUTPUT}"
+        echo "latest=${latest}" >> "${GITHUB_OUTPUT}"
     - name: Open a Pull Request
+      if: steps.go.outputs.configured != steps.go.outputs.latest
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |-
         # Open a "Dependabot style" Pull Request against this repository if
         # there is a delta between "as configured" and "latest".
+        set -eu
+
+        branch="update/go/setup-go-with-go-version-${{ steps.go.outputs.latest }}"
+
+        git config user.name "${GITHUB_ACTOR}"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+        git fetch origin
+
+        # If the branch already exists remotely, do nothing.
+        if git rev-parse --verify "origin/${branch}" >/dev/null 2>&1; then
+          printf '%s\n' "Branch ${branch} already exists on origin; skipping PR creation."
+          exit 0
+        fi
+
+        git checkout -b "${branch}"
+
+        # Check if there are any changes to be committed.
+        if git diff --quiet; then
+          echo "No changes to commit; skipping PR creation."
+          exit 0
+        fi
+
+        git commit -am "Bumps Go from ${{ steps.go.outputs.configured }} to ${{ steps.go.outputs.latest }}."
+        git push --set-upstream origin "${branch}"
+
+        # Create the pull request.
+        gh pr create \
+          --title "Bump Go from \`${{ steps.go.outputs.configured }}\` to \`${{ steps.go.outputs.latest }}\`" \
+          --body "Bumps Go from \`${{ steps.go.outputs.configured }}\` to \`${{ steps.go.outputs.latest }}\`." \
+          --base "${{ github.ref_name }}" \
+          --label dependencies \
+
   update-actionlint:
     name: Update actionlint
     runs-on: ubuntu-24.04
