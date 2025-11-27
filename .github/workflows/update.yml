@@ -15,22 +15,26 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-    - name: Get Configured Version
+    - name: Get Go Versions
+      id: go
+      env:
+        WORKFLOW_FILE: .github/workflows/lint.yml
       run: |-
         # Get the configured version number in the `actions/setup-go` step.
-        configured="$(
+        configured_version="$(
           sed -n 's/^[[:space:]]*go-version:[[:space:]]*//p' "${WORKFLOW_FILE}" \
           | head -n 1 \
           | tr -d '[:space:]'
         )"
-        printf '%s\n' "${configured}"
-        echo "configured=${configured}" >> "${GITHUB_OUTPUT}"
-      env:
-        WORKFLOW_FILE: .github/workflows/lint.yml
-    - name: Get Latest Version
-      run: |-
         # Get the latest version released.
-        #echo "latest=${latest}" >> "${GITHUB_OUTPUT}"
+        latest_version="$(
+          curl -fsSL "https://go.dev/VERSION?m=text" \
+          | sed 's/^go//'
+        )"
+        printf '%s\n' "${configured_version}"
+        printf '%s\n' "${latest_version}"
+        echo "configured_version=${configured_version}" >> "${GITHUB_OUTPUT}"
+        echo "latest_version=${latest_version}" >> "${GITHUB_OUTPUT}"
     - name: Open a Pull Request
       run: |-
         # Open a "Dependabot style" Pull Request against this repository if
