@@ -12,10 +12,13 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-    - name: Lint GitHub Actions Workflow Files
-      uses: docker://rhysd/actionlint@sha256:1d74bfc9fd1963af8f89a7c22afaaafd42f49aad711a09951d02cb996398f61d # v1.7.7
+    - name: Setup Go
+      uses: actions/setup-go@v6
       with:
-        args: -color
+        go-version: 1.25.4
+    - name: Install actionlint
+      run: |
+        go install github.com/rhysd/actionlint/cmd/actionlint@a443f344ff32813837fa49f7aa6cbc478d770e62 # v1.7.9
   yamllint:
     name: YAML
     runs-on: ubuntu-24.04
@@ -25,7 +28,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
-        python-version: '3.14'
+        python-version: 3.14.0
     - name: Install yamllint
       run: |
         pip install --upgrade pip
@@ -42,7 +45,7 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
       with:
-        terraform_version: 1.13.4
+        terraform_version: 1.14.0
     - name: Lint Terraform Files
       run: |
         terraform fmt -recursive -check
@@ -59,7 +62,7 @@ jobs:
     - name: Setup TFLint
       uses: terraform-linters/setup-tflint@v6
       with:
-        tflint_version: v0.59.1
+        tflint_version: v0.60.0
     - name: TFLint
       run: |
         terraform init -backend=false
