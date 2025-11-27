@@ -33,8 +33,8 @@ jobs:
         )"
         printf '%s\n' "${configured_version}"
         printf '%s\n' "${latest_version}"
-        echo "configured_version=${configured_version}" >> "${GITHUB_OUTPUT}"
-        echo "latest_version=${latest_version}" >> "${GITHUB_OUTPUT}"
+        echo "configured_version=${configured_version}" >> "$GITHUB_OUTPUT"
+        echo "latest_version=${latest_version}" >> "$GITHUB_OUTPUT"
     - name: Open a Pull Request
       run: |-
         # Open a "Dependabot style" Pull Request against this repository if
