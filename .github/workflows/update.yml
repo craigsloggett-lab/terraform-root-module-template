@@ -5,8 +5,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update-setup-go:
@@ -45,7 +44,7 @@ jobs:
     - name: Open a Pull Request
       if: steps.go.outputs.configured != steps.go.outputs.latest
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ secrets.UDPATE_WORKFLOW_TOKEN }}
       run: |-
         set -eu
         # Configure a branch to create a pull request against.
