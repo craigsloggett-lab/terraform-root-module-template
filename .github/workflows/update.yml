@@ -24,17 +24,19 @@ jobs:
         configured_version="$(
           sed -n 's/^[[:space:]]*go-version:[[:space:]]*//p' "${WORKFLOW_FILE}" \
           | head -n 1 \
-          | tr -d '[:space:]'
+          | tr -d '[:space:]' \
+          | tr -d "\'"
         )"
         # Get the latest version released.
         latest_version="$(
           curl -fsSL "https://go.dev/VERSION?m=text" \
+          | head -n 1 \
           | sed 's/^go//'
         )"
         printf '%s\n' "${configured_version}"
         printf '%s\n' "${latest_version}"
-        echo "configured_version=${configured_version}" >> "$GITHUB_OUTPUT"
-        echo "latest_version=${latest_version}" >> "$GITHUB_OUTPUT"
+        echo "configured_version=${configured_version}" >> "${GITHUB_OUTPUT}"
+        echo "latest_version=${latest_version}" >> "${GITHUB_OUTPUT}"
     - name: Open a Pull Request
       run: |-
         # Open a "Dependabot style" Pull Request against this repository if
