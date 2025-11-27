@@ -1,0 +1,53 @@
+name: Update
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-setup-go:
+    name: Update Go Version
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Get Configured Version
+      run: |-
+        # Get the configured version number in the `actions/setup-go` step.
+        configured="$(
+          sed -n 's/^[[:space:]]*go-version:[[:space:]]*//p' "${WORKFLOW_FILE}" \
+          | head -n 1 \
+          | tr -d '[:space:]'
+        )"
+        printf '%s\n' "${configured}"
+        echo "configured=${configured}" >> "${GITHUB_OUTPUT}"
+      env:
+        WORKFLOW_FILE: .github/workflows/lint.yml
+    - name: Get Latest Version
+      run: |-
+        # Get the latest version released.
+        #echo "latest=${latest}" >> "${GITHUB_OUTPUT}"
+    - name: Open a Pull Request
+      run: |-
+        # Open a "Dependabot style" Pull Request against this repository if
+        # there is a delta between "as configured" and "latest".
+  update-actionlint:
+    name: Update actionlint
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Get Configured Version
+      run: |-
+        # Get the configured commit SHA in the `Install actionlint` step.
+    - name: Get Latest Version
+      run: |-
+        # Get the latest version released.
+    - name: Open a Pull Request
+      run: |-
+        # Open a "Dependabot style" Pull Request against this repository if
+        # there is a delta between "as configured" and "latest".
