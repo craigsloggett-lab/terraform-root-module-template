@@ -1,6 +1,9 @@
 name: Lint
 
-on: pull_request
+on:
+  pull_request:
+  push:
+    branch: main
 
 permissions:
   contents: read
@@ -19,6 +22,9 @@ jobs:
     - name: Install actionlint
       run: |
         go install github.com/rhysd/actionlint/cmd/actionlint@a443f344ff32813837fa49f7aa6cbc478d770e62 # v1.7.9
+    - name: Lint Workflow Files
+      run: |
+        actionlint
   yamllint:
     name: YAML
     runs-on: ubuntu-24.04
