@@ -5,7 +5,108 @@ on: pull_request
 permissions:
   contents: read
 
+env:
+  go_version: 1.25.4
+  python_version: 3.14.0
+  terraform_version: 1.14.0
+  tflint_version: 0.60.0
+  # Optional, only if you are linting a code base
+  # which consumes modules published to a private
+  # module registry.
+  hcp_terraform_hostname: app.terraform.io
+  hcp_terraform_api-token: ${{ secrets.hcp-terraform-api-token }}
+
 jobs:
-  lint:
-    name: Terraform # All downstream jobs are nested within this job in the GitHub UI.
-    uses: craigsloggett-lab/.github/.github/workflows/lint-terraform.yml@main
+  actionlint:
+    name: GitHub Actions
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Setup Go
+      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      with:
+        go-version: ${{ env.go_version }}
+        cache: false
+    - name: Install actionlint
+      run: |
+        go install github.com/rhysd/actionlint/cmd/actionlint@a443f344ff32813837fa49f7aa6cbc478d770e62 # v1.7.9
+    - name: Lint Workflow Files
+      run: |
+        actionlint -color
+  yamllint:
+    name: YAML
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Setup Python
+      uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      with:
+        python-version: ${{ env.python_version }}
+    - name: Install yamllint
+      run: |
+        pip install --upgrade pip
+        pip install yamllint
+    - name: Lint YAML Files
+      run: |
+        yamllint .
+  terraform-fmt:
+    name: Terraform
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      with:
+        terraform_version: ${{ env.terraform_version }}
+    - name: Lint Terraform Files
+      run: |
+        terraform fmt -recursive -check
+  tflint:
+    name: TFLint
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      with:
+        terraform_version: ${{ env.terraform_version }}
+    - name: Setup TFLint
+      uses: terraform-linters/setup-tflint@v6
+      with:
+        tflint_version: v${{ env.tflint_version }}
+    - name: Export HCP Terraform API Token
+      run: |
+        # The hostname must be sanitized to be exported correctly:
+        # > Environment variable names should have the prefix TF_TOKEN_
+        # > added to the hostname, with periods encoded as underscores.
+        # > Hyphens are also valid within host names but usually invalid
+        # > as variable names and may be encoded as _double underscores_.
+        sanitized_hostname="$(
+          printf '%s\n' ${{ env.hcp_terraform_hostname }} \
+          | tr '.' '_' \
+          | sed 's/-/__/g'
+        )"
+        # The name of the environment variable.
+        tf_token_name="TF_TOKEN_${sanitized_hostname}"
+        tf_token="${{ secrets.hcp-terraform-api-token }}"
+        # Export the API token.
+        printf '%s=%s' "${tf_token_name}" "${tf_token}" >> "${GITHUB_ENV}"
+    - name: TFLint
+      run: |
+        terraform init -backend=false
+        tflint --init
+        tflint --recursive --format=compact
+  terraform-docs:
+    name: Terraform Docs
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Generate Docs
+      uses: terraform-docs/gh-actions@6de6da0cefcc6b4b7a5cbea4d79d97060733093c # v1.4.1
+      with:
+        fail-on-diff: true
